@@ -1,0 +1,74 @@
+{
+  lib,
+  config,
+  ...
+}:
+let
+  concatMapWanAttrs = config.router.concatMapInterfaceAttrs (
+    interface: interface.type == "wan" && interface.connectionType == "pppoe"
+  );
+  concatMapWans = config.router.concatMapInterfaces (
+    interface: interface.type == "wan" && interface.connectionType == "pppoe"
+  );
+in
+{
+  config = lib.mkIf config.router.enable {
+    systemd.network = {
+      networks = concatMapWanAttrs (interface: {
+        "${toString interface.priority}-${interface.name}" = {
+          matchConfig = {
+            Name = interface.name;
+          };
+          networkConfig = {
+            LinkLocalAddressing = false;
+            IPv6LinkLocalAddressGenerationMode = "stable-privacy";
+            DHCP = "ipv6";
+            IPv6AcceptRA = true;
+            IPv6SendRA = false;
+          };
+          dhcpV6Config = {
+            PrefixDelegationHint = "::/${toString interface.prefixDelegationLengthHint}";
+            SendHostname = false;
+            WithoutRA = "solicit";
+          };
+          dhcpPrefixDelegationConfig = {
+            UplinkInterface = ":self";
+          };
+          ipv6AcceptRAConfig = {
+            DHCPv6Client = "always";
+          };
+        };
+      });
+    };
+    services.pppd = {
+      enable = true;
+      peers = concatMapWanAttrs (interface: {
+        "interface-${interface.name}".config = ''
+          plugin pppoe.so
+          nic-${interface.name}
+          +ipv6
+          nodetach
+          ifname wan
+          usepeerdns
+          defaultroute
+          persist
+          maxfail 0
+          lcp-echo-interval 1
+          lcp-echo-failure 5
+          lcp-echo-adaptive
+          up_sdnotify
+          name ${interface.pppoeUsername}
+        '';
+      });
+    };
+  };
+  systemd.services = concatMapWanAttrs (interface: {
+    "pppd-interface-${interface.name}".serviceConfig.Type = "notify";
+  });
+  environment.etc."ppp/pap-secrets" = {
+    mode = "0600";
+    text = lib.concatLines (
+      concatMapWans (interface: "${interface.pppoeUsername} * @${interface.pppoePasswordPath} *")
+    );
+  };
+}

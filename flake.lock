@@ -1,0 +1,48 @@
+{
+  "nodes": {
+    "networkd-ipmon": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1750823920,
+        "narHash": "sha256-YOXlF3/mcoqaBZGzQKaIIxBxgQ4ywZwlJUJe+GiIZRg=",
+        "owner": "hgl",
+        "repo": "networkd-ipmon",
+        "rev": "e637d2fed9b01ab687e671a90ab3ec404893edcd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hgl",
+        "repo": "networkd-ipmon",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1752446735,
+        "narHash": "sha256-Nz2vtUEaRB/UjvPfuhHpez060P/4mvGpXW4JCDIboA4=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a421ac6595024edcfbb1ef950a3712b89161c359",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "networkd-ipmon": "networkd-ipmon",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
