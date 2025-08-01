@@ -151,6 +151,12 @@ let
             The type of connection this WAN interface use to be able to access the internet
           '';
         };
+        port = mkOption {
+          type = types.nonEmptyStr;
+          description = ''
+            The WAN interface's port to use for PPPoE
+          '';
+        };
         macAddress = mkOption {
           type = types.nonEmptyStr;
           description = ''

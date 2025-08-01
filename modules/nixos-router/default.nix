@@ -22,7 +22,8 @@ in
     ./vlan.nix
     ./xfrm.nix
     ./wan-dhcp.nix
-    ./nft.nix
+    ./wan-pppoe.nix
+    ./nftables.nix
     ./ddns.nix
   ];
   config = lib.mkIf config.router.enable {

@@ -15,12 +15,20 @@ in
   config = lib.mkIf config.router.enable {
     systemd.network = {
       networks = concatMapWanAttrs (interface: {
+        # This is required to bring the interface up
+        "${toString config.router.interfacePortPriority}-${interface.port}" = {
+          matchConfig = {
+            Name = interface.port;
+          };
+          networkConfig = {
+            LinkLocalAddressing = false;
+          };
+        };
         "${toString interface.priority}-${interface.name}" = {
           matchConfig = {
             Name = interface.name;
           };
           networkConfig = {
-            LinkLocalAddressing = false;
             IPv6LinkLocalAddressGenerationMode = "stable-privacy";
             DHCP = "ipv6";
             IPv6AcceptRA = true;
@@ -40,15 +48,16 @@ in
         };
       });
     };
+
     services.pppd = {
       enable = true;
       peers = concatMapWanAttrs (interface: {
         "interface-${interface.name}".config = ''
           plugin pppoe.so
-          nic-${interface.name}
+          nic-${interface.port}
           +ipv6
           nodetach
-          ifname wan
+          ifname ${interface.name}
           usepeerdns
           defaultroute
           persist
@@ -61,14 +70,14 @@ in
         '';
       });
     };
-  };
-  systemd.services = concatMapWanAttrs (interface: {
-    "pppd-interface-${interface.name}".serviceConfig.Type = "notify";
-  });
-  environment.etc."ppp/pap-secrets" = {
-    mode = "0600";
-    text = lib.concatLines (
-      concatMapWans (interface: "${interface.pppoeUsername} * @${interface.pppoePasswordPath} *")
-    );
+    systemd.services = concatMapWanAttrs (interface: {
+      "pppd-interface-${interface.name}".serviceConfig.Type = "notify";
+    });
+    environment.etc."ppp/pap-secrets" = {
+      mode = "0600";
+      text = lib.concatLines (
+        concatMapWans (interface: [ "${interface.pppoeUsername} * @${interface.pppoePasswordPath} *" ])
+      );
+    };
   };
 }
