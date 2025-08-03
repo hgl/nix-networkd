@@ -204,7 +204,6 @@ let
       };
     }
   );
-  ipv6Prefix = lib.elemAt (lib.match "([^/]+)::/.+" config.router.ulaPrefix) 0;
   ipv6 =
     interface:
     mkOption {
@@ -432,13 +431,30 @@ in
       internal = true;
       readOnly = true;
       default =
+        let
+          ipv6Prefix = lib.elemAt (lib.match "([^/]+)::/.+" config.router.ulaPrefix) 0;
+        in
         {
           subnetId,
           interfaceId,
           prefixLength ? null,
         }:
-        "${ipv6Prefix}${lib.optionalString (subnetId != 0) ":${toString subnetId}"}::${
-          lib.optionalString (interfaceId != 0) (toString interfaceId)
+        let
+          interfaceIdString = if lib.isString interfaceId then interfaceId else lib'.decToHex interfaceId;
+          sep =
+            if
+              lib.isString interfaceId
+              && (
+                lib.hasInfix "::" interfaceId
+                || lib.match "[a-fA-F0-9]{1,4}(:[a-fA-F0-9]{1,4}){4}" interfaceId != null
+              )
+            then
+              ":"
+            else
+              "::";
+        in
+        "${ipv6Prefix}${lib.optionalString (subnetId != 0) ":${lib'.decToHex subnetId}"}${sep}${
+          lib.optionalString (interfaceIdString != "0") interfaceIdString
         }${lib.optionalString (prefixLength != null) "/${toString prefixLength}"}";
     };
     ipv4 = mkOption {
