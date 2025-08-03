@@ -253,48 +253,37 @@ let
     poolv4 = poolv4 interface interface.dhcpServer.poolv4;
     staticLeases = mkOption {
       type = types.attrsOf (
-        types.addCheck (types.submodule (
+        types.submodule (
           { name, config, ... }:
           {
-            enable = mkEnableOption "this static lease" // {
-              default = true;
-            };
-            hostName = mkOption {
-              type = types.nonEmptyStr;
-              default = name;
-              description = ''
-                Client host name to match and assign
-              '';
-            };
-            macAddress = mkOption {
-              type = types.nonEmptyStr;
-              description = ''
-                Client MAC address to match
-              '';
-            };
-            hostId = mkOption {
-              type = types.nullOr types.ints.between 2 254;
-              default = null;
-              description = ''
-                Client will be assigned an IPv4 address in format of
+            options = {
+              enable = mkEnableOption "this static lease" // {
+                default = true;
+              };
+              hostName = mkOption {
+                type = types.nonEmptyStr;
+                default = name;
+                description = ''
+                  Client host name to match and assign
+                '';
+              };
+              macAddress = mkOption {
+                type = types.nonEmptyStr;
+                description = ''
+                  Client MAC address to match
+                '';
+              };
+              hostId = mkOption {
+                type = types.ints.between 2 254;
+                description = ''
+                  Client will be assigned an IPv4 address in format of
 
-                10.''${router.ipv4SubnetId}.''${interface.subnetId}.''${hostId}
-              '';
-            };
-            interfaceId = mkOption {
-              type = types.nullOr types.oneOf [
-                types.ints.positive
-                types.nonEmptyStr
-              ];
-              default = null;
-              description = ''
-                Client will be assigned an IPv6 address in format of
-
-                ''${router.ulaPrefix}:''${interface.subnetId}::''${interfaceId}
-              '';
+                  10.''${router.ipv4SubnetId}.''${interface.subnetId}.''${hostId}
+                '';
+              };
             };
           }
-        )) (x: x.hostId != null || x.interfaceId != null)
+        )
       );
       default = { };
       description = ''

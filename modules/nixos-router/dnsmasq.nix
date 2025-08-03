@@ -70,12 +70,10 @@ in
         interface:
         lib'.concatMapAttrsToList (
           _: lease:
-          let
-            ipv4Part = ",${interface.ipv4 { inherit (lease) hostId; }}";
-            ipv6Part = "${lib.optionalString (lease.interfaceId != "") ",::${lease.interfaceId}]"}";
-          in
-          lib.optionals (lease.enable) "${lease.hostName},${lease.macAddress}${ipv4Part}${ipv6Part}"
-        ) interface.staticLeases or { }
+          lib.optional lease.enable "${lease.hostName},${lease.macAddress},${
+            interface.ipv4 { inherit (lease) hostId; }
+          }"
+        ) interface.dhcpServer.staticLeases or { }
       );
     };
     services.dbus.packages = [ cfg.package ];
