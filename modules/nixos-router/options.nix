@@ -53,20 +53,14 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId nftables;
+        inherit
+          priority
+          subnetId
+          nftables
+          ports
+          ;
         name = nameOption name;
-        type = mkOption {
-          type = types.enum [ "bridge" ];
-          default = "bridge";
-          internal = true;
-          description = "Type";
-        };
-        ports = mkOption {
-          type = types.nonEmptyListOf types.nonEmptyStr;
-          description = ''
-            The ports this interface includes
-          '';
-        };
+        type = interfaceType "bridge";
         dhcpServer = dhcpServer config;
         ipv6 = ipv6 config;
         ipv4 = ipv4 config;
@@ -78,20 +72,14 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId nftables;
+        inherit
+          priority
+          subnetId
+          nftables
+          ports
+          ;
         name = nameOption name;
-        type = mkOption {
-          type = types.enum [ "vlan" ];
-          default = "vlan";
-          internal = true;
-          description = "Type";
-        };
-        ports = mkOption {
-          type = types.nonEmptyListOf types.nonEmptyStr;
-          description = ''
-            The ports this interface includes
-          '';
-        };
+        type = interfaceType "vlan";
         vlanId = mkOption {
           type = types.ints.between 1 4094;
           description = ''
@@ -111,12 +99,7 @@ let
       options = {
         inherit priority subnetId nftables;
         name = nameOption name;
-        type = mkOption {
-          type = types.enum [ "xfrm" ];
-          default = "xfrm";
-          internal = true;
-          description = "Type";
-        };
+        type = interfaceType "xfrm";
         xfrmId = mkOption {
           type = types.ints.between 1 4294967295;
           description = ''
@@ -136,12 +119,7 @@ let
       options = {
         inherit priority nftables;
         name = nameOption name;
-        type = mkOption {
-          type = types.enum [ "wan" ];
-          default = "wan";
-          internal = true;
-          description = "Type";
-        };
+        type = interfaceType "wan";
         connectionType = mkOption {
           type = types.enum [
             "pppoe"
@@ -334,6 +312,16 @@ let
         Interface name
       '';
     };
+  interfaceType =
+    type:
+    mkOption {
+      type = types.enum [ type ];
+      default = type;
+      internal = true;
+      description = ''
+        Interface type
+      '';
+    };
   priority = mkOption {
     type = types.ints.between 10 69;
     default = 10;
@@ -386,6 +374,12 @@ let
         Extra nftable rules for the table of this interface
       '';
     };
+  };
+  ports = mkOption {
+    type = types.nonEmptyListOf types.nonEmptyStr;
+    description = ''
+      The ports this interface includes
+    '';
   };
   quarantine = {
     enable = mkEnableOption "qurantine on this interface";
