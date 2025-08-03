@@ -53,7 +53,7 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId;
+        inherit priority subnetId nftables;
         name = nameOption name;
         type = mkOption {
           type = types.enum [ "bridge" ];
@@ -78,7 +78,7 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId;
+        inherit priority subnetId nftables;
         name = nameOption name;
         type = mkOption {
           type = types.enum [ "vlan" ];
@@ -109,7 +109,7 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId;
+        inherit priority subnetId nftables;
         name = nameOption name;
         type = mkOption {
           type = types.enum [ "xfrm" ];
@@ -134,7 +134,7 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority;
+        inherit priority nftables;
         name = nameOption name;
         type = mkOption {
           type = types.enum [ "wan" ];
@@ -181,36 +181,6 @@ let
           description = ''
             File containing the password to use for the PPPOE connection
           '';
-        };
-        nftables = {
-          inputChain = mkOption {
-            type = types.lines;
-            default = "";
-            description = ''
-              Nftable rules for the input chain of this interface
-            '';
-          };
-          forwardChain = mkOption {
-            type = types.lines;
-            default = "";
-            description = ''
-              Nftable rules for the forward chain of this interface
-            '';
-          };
-          dstnatChain = mkOption {
-            type = types.lines;
-            default = "";
-            description = ''
-              Nftable rules for the dstnat chain of this interface
-            '';
-          };
-          extraConfig = mkOption {
-            type = types.lines;
-            default = "";
-            description = ''
-              Extra nftable rules for the table of this interface
-            '';
-          };
         };
         ddns = mkOption {
           type = types.listOf (
@@ -379,6 +349,43 @@ let
       IPv4: 10.''${router.ipv4SubnetId}.''${subnetId}.1
       IPv6: ''${router.ulaPrefix}:''${subnetId}::1
     '';
+  };
+  nftables = {
+    inputChain = mkOption {
+      type = types.lines;
+      default = "";
+      description = ''
+        Nftable rules for the input chain of this interface
+      '';
+    };
+    forwardChain = mkOption {
+      type = types.lines;
+      default = "";
+      description = ''
+        Nftable rules for the forward chain of this interface
+      '';
+    };
+    srcnatChain = mkOption {
+      type = types.lines;
+      default = "";
+      description = ''
+        Nftable rules for the dstnat chain of this interface
+      '';
+    };
+    dstnatChain = mkOption {
+      type = types.lines;
+      default = "";
+      description = ''
+        Nftable rules for the dstnat chain of this interface
+      '';
+    };
+    extraConfig = mkOption {
+      type = types.lines;
+      default = "";
+      description = ''
+        Extra nftable rules for the table of this interface
+      '';
+    };
   };
   quarantine = {
     enable = mkEnableOption "qurantine on this interface";
