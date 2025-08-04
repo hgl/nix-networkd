@@ -14,12 +14,15 @@ let
 in
 {
   config = lib.mkIf config.router.enable {
-    services.resolved = {
-      llmnr = "false";
-      extraConfig = ''
-        Cache=false
-        ${lib.optionalString config.services.adguardhome.enable "DNS=${upstream}"}
-      '';
-    };
+    services.resolved =
+      {
+        llmnr = "false";
+        extraConfig = ''
+          Cache=false
+        '';
+      }
+      // lib.optionalAttrs config.services.adguardhome.enable {
+        dns = [ upstream ];
+      };
   };
 }

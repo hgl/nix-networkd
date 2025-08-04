@@ -16,6 +16,7 @@ in
     networkd-ipmon.nixosModules.networkd-ipmon
     ./options.nix
     ./dnsmasq.nix
+    ./resolved-module.nix
     ./resolved.nix
     ./adguardhome.nix
     ./bridge.nix
