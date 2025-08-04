@@ -1,5 +1,6 @@
 {
   lib,
+  lib',
   config,
   ...
 }:
@@ -26,7 +27,7 @@ in
                 ct state vmap { established : accept, related : accept }
                 fib daddr type { broadcast, multicast } accept
                 ip daddr != ${interface.ipv4 { hostId = 1; }} drop
-                ip6 daddr & ::ffff:ffff:ffff:ffff:ffff != 0:0:0:${toString interface.subnetId}::1 drop
+                ip6 daddr & ::ffff:ffff:ffff:ffff:ffff != 0:0:0:${lib'.decToHex interface.subnetId}::1 drop
                 meta nfproto ipv4 udp sport 68 udp dport 67 accept comment "Allow DHCP"
                 meta nfproto ipv6 udp sport 547 udp dport 546 accept comment "Allow DHCPv6"
                 icmp type echo-request accept comment "Allow Ping"

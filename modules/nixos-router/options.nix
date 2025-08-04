@@ -323,7 +323,7 @@ let
       NixOS router uses this format for each interface's IP addresses:
 
       IPv4: 10.''${router.ipv4SubnetId}.''${subnetId}.1
-      IPv6: ''${router.ulaPrefix}:''${subnetId}::1
+      IPv6: ''${router.ulaPrefix}:''${toHex subnetId}::1
     '';
   };
   nftables = {

@@ -67,7 +67,7 @@ in
               RequiredForOnline = "no-carrier";
             };
             dhcpPrefixDelegationConfig = {
-              SubnetId = interface.subnetId;
+              SubnetId = lib'.decToHex interface.subnetId;
               Token = "static:::1";
             };
           };
