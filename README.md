@@ -21,4 +21,5 @@ For a real-world example, see how it's used in [my Nix configs](https://github.c
 ## TODO
 
 - Better DDNS support
+- When `networking.nameservers` is empty, use DNS from DHCP for WAN
 - Multi-WAN support
