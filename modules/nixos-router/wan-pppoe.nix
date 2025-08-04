@@ -33,11 +33,15 @@ in
             DHCP = "ipv6";
             IPv6AcceptRA = true;
             IPv6SendRA = false;
+            # Only allow resolved to use the upstream DNS directly if it's
+            # the terminal resolver and no static nameservers are configured
+            DNSDefaultRoute = !config.services.adguardhome.enable;
           };
           dhcpV6Config = {
             PrefixDelegationHint = "::/${toString interface.prefixDelegationLengthHint}";
             SendHostname = false;
             WithoutRA = "solicit";
+            UseDNS = config.networking.nameservers == [ ];
           };
           dhcpPrefixDelegationConfig = {
             UplinkInterface = ":self";

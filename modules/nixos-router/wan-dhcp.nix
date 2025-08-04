@@ -31,7 +31,7 @@ in
           networkConfig = {
             IPv6LinkLocalAddressGenerationMode = "stable-privacy";
             DHCP = true;
-            # Only allow resolved to use the upstream DNSes directly if it's
+            # Only allow resolved to use the upstream DNS directly if it's
             # the terminal resolver and no static nameservers are configured
             DNSDefaultRoute = !config.services.adguardhome.enable;
           };
