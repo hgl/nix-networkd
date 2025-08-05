@@ -21,7 +21,9 @@ let
     listsAsDuplicateKeys = true;
   };
   conf = settingsFormat.generate "dnsmasq.conf" cfg.settings;
-  concatMapDnsInterfaces = config.router.concatMapInterfaces ({ type, ... }: type != "wan");
+  concatMapDnsInterfaces = config.router.concatMapInterfaces (
+    interface: interface.dns.enable or false
+  );
 in
 {
   config = lib.mkIf config.router.enable {

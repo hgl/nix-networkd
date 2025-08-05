@@ -56,15 +56,16 @@ let
         inherit
           priority
           subnetId
+          dns
           nftables
           ports
+          quarantine
           ;
         name = nameOption name;
         type = interfaceType "bridge";
         dhcpServer = dhcpServer config;
         ipv6 = ipv6 config;
         ipv4 = ipv4 config;
-        inherit quarantine;
       };
     }
   );
@@ -75,8 +76,10 @@ let
         inherit
           priority
           subnetId
+          dns
           nftables
           ports
+          quarantine
           ;
         name = nameOption name;
         type = interfaceType "vlan";
@@ -89,7 +92,6 @@ let
         dhcpServer = dhcpServer config;
         ipv6 = ipv6 config;
         ipv4 = ipv4 config;
-        inherit quarantine;
       };
     }
   );
@@ -97,7 +99,13 @@ let
     { name, config, ... }:
     {
       options = {
-        inherit priority subnetId nftables;
+        inherit
+          priority
+          subnetId
+          dns
+          nftables
+          quarantine
+          ;
         name = nameOption name;
         type = interfaceType "xfrm";
         xfrmId = mkOption {
@@ -109,7 +117,6 @@ let
         poolv4 = poolv4 config config.poolv4;
         ipv6 = ipv6 config;
         ipv4 = ipv4 config;
-        inherit quarantine;
       };
     }
   );
@@ -244,6 +251,11 @@ let
       internal = true;
       readOnly = true;
       default = interface.ipv4 { hostId = lib.elemAt pool.range 1; };
+    };
+  };
+  dns = {
+    enable =  mkEnableOption "DNS resolver on this interface" // {
+      default = true;
     };
   };
   dhcpServer = interface: {
