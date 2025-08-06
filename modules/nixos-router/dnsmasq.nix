@@ -117,7 +117,8 @@ in
     # resolved set this file with default override priority, set it one less
     # so it's still overridable with mkForce
     environment.etc."resolv.conf".text = lib.mkOverride (lib.modules.defaultOverridePriority - 1) ''
-      name_servers='127.0.0.1${lib.optionalString config.networking.enableIPv6 " ::1"}'
+      ${lib.optionalString config.networking.enableIPv6 "nameserver ::1"}
+      nameserver 127.0.0.1
       options edns0 trust-ad
     '';
   };
