@@ -47,7 +47,7 @@ in
             UplinkInterface = ":self";
           };
           ipv6AcceptRAConfig = {
-            DHCPv6Client = "always";
+            UseDNS = config.networking.nameservers == [ ];
           };
         };
       });
