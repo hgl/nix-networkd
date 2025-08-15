@@ -147,6 +147,22 @@ in
               drop
             }
 
+            chain mangle {
+              type filter hook forward priority mangle;
+              oifname "${interface.name}" jump mangle-interface
+            }
+            chain mangle-interface {
+              tcp flags syn tcp option maxseg size set rt mtu
+            }
+
+            chain mangle-output {
+              type filter hook output priority mangle;
+              oifname "${interface.name}" jump mangle-output-interface
+            }
+            chain mangle-output-interface {
+              tcp flags syn tcp option maxseg size set rt mtu
+            }
+
             chain forward {
               type filter hook forward priority filter;
               iifname "${interface.name}" jump forward-interface
@@ -165,8 +181,8 @@ in
               oifname "${interface.name}" jump srcnat-interface
             }
             chain srcnat-interface {
-              ${interface.nftables.srcnatChain}
               meta nfproto ipv4 masquerade
+              ${interface.nftables.srcnatChain}
             }
 
             ${lib.optionalString (interface.nftables.dstnatChain != "") ''
