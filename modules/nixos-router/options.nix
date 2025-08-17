@@ -6,7 +6,7 @@
 }:
 let
   lib' = nixosRouterLib;
-  inherit (lib) mkOption mkEnableOption types;
+  inherit (lib) types;
   functionType = lib.mkOptionType {
     name = "function";
     description = "function value";
@@ -31,7 +31,7 @@ let
               [
                 {
                   freeformType = lib.types.lazyAttrsOf lib.types.raw;
-                  options.type = mkOption {
+                  options.type = lib.mkOption {
                     type = lib.types.str;
                   };
                 }
@@ -83,7 +83,7 @@ let
           ;
         name = nameOption name;
         type = interfaceType "vlan";
-        vlanId = mkOption {
+        vlanId = lib.mkOption {
           type = types.ints.between 1 4094;
           description = ''
             VLAN ID
@@ -108,7 +108,7 @@ let
           ;
         name = nameOption name;
         type = interfaceType "xfrm";
-        xfrmId = mkOption {
+        xfrmId = lib.mkOption {
           type = types.ints.between 1 4294967295;
           description = ''
             XFRM interface ID
@@ -127,7 +127,7 @@ let
         inherit priority nftables;
         name = nameOption name;
         type = interfaceType "wan";
-        connectionType = mkOption {
+        connectionType = lib.mkOption {
           type = types.enum [
             "pppoe"
             "dhcp"
@@ -136,42 +136,42 @@ let
             The type of connection this WAN interface use to be able to access the internet
           '';
         };
-        port = mkOption {
+        port = lib.mkOption {
           type = types.nonEmptyStr;
           description = ''
             The WAN interface's port to use for PPPoE
           '';
         };
-        macAddress = mkOption {
+        macAddress = lib.mkOption {
           type = types.nonEmptyStr;
           description = ''
             This WAN interface's MAC address. Used to find the interface
           '';
         };
-        prefixDelegationLengthHint = mkOption {
+        prefixDelegationLengthHint = lib.mkOption {
           type = types.ints.between 48 64;
           default = 56;
           description = ''
             DHCPv6 prefix delegation length hint to use
           '';
         };
-        pppoeUsername = mkOption {
+        pppoeUsername = lib.mkOption {
           type = types.str;
           description = ''
             User name to use for the PPPOE connection
           '';
         };
-        pppoePasswordPath = mkOption {
+        pppoePasswordPath = lib.mkOption {
           type = types.path;
           description = ''
             File containing the password to use for the PPPOE connection
           '';
         };
-        ddns = mkOption {
+        ddns = lib.mkOption {
           type = types.listOf (
             types.submodule {
               options = {
-                enable = mkOption {
+                enable = lib.mkOption {
                   type = types.enum [
                     true
                     false
@@ -183,16 +183,16 @@ let
                     Whetehr to enable this DDNS service (or IPv4/IPv6 only)
                   '';
                 };
-                domains = mkOption {
+                domains = lib.mkOption {
                   type = types.nonEmptyListOf types.nonEmptyStr;
                   description = ''
                     The domain to update
                   '';
                 };
-                provider = mkOption {
+                provider = lib.mkOption {
                   type = types.submodule {
                     freeformType = types.attrsOf types.str;
-                    options.type = mkOption {
+                    options.type = lib.mkOption {
                       type = types.nonEmptyStr;
                     };
                   };
@@ -213,7 +213,7 @@ let
   );
   ipv6 =
     interface:
-    mkOption {
+    lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;
@@ -221,14 +221,14 @@ let
     };
   ipv4 =
     interface:
-    mkOption {
+    lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;
       default = args: config.router.ipv4 (args // { inherit (interface) subnetId; });
     };
   poolv4 = interface: pool: {
-    range = mkOption {
+    range = lib.mkOption {
       type = types.addCheck (types.listOf (types.ints.between 1 254)) (
         x: lib.length x == 2 && lib.elemAt x 0 <= lib.elemAt x 1
       );
@@ -240,13 +240,13 @@ let
         start and end hostId for the IPv4 DHCP pool
       '';
     };
-    startIp = mkOption {
+    startIp = lib.mkOption {
       type = types.str;
       internal = true;
       readOnly = true;
       default = interface.ipv4 { hostId = lib.elemAt pool.range 0; };
     };
-    endIp = mkOption {
+    endIp = lib.mkOption {
       type = types.str;
       internal = true;
       readOnly = true;
@@ -254,38 +254,38 @@ let
     };
   };
   dns = {
-    enable =  mkEnableOption "DNS resolver on this interface" // {
+    enable = lib.mkEnableOption "DNS resolver on this interface" // {
       default = true;
     };
   };
   dhcpServer = interface: {
-    enable = mkEnableOption "DHCP server on this interface" // {
+    enable = lib.mkEnableOption "DHCP server on this interface" // {
       default = true;
     };
     poolv4 = poolv4 interface interface.dhcpServer.poolv4;
-    staticLeases = mkOption {
+    staticLeases = lib.mkOption {
       type = types.attrsOf (
         types.submodule (
           { name, config, ... }:
           {
             options = {
-              enable = mkEnableOption "this static lease" // {
+              enable = lib.mkEnableOption "this static lease" // {
                 default = true;
               };
-              hostName = mkOption {
+              hostName = lib.mkOption {
                 type = types.nonEmptyStr;
                 default = name;
                 description = ''
                   Client host name to match and assign
                 '';
               };
-              macAddress = mkOption {
+              macAddress = lib.mkOption {
                 type = types.nonEmptyStr;
                 description = ''
                   Client MAC address to match
                 '';
               };
-              hostId = mkOption {
+              hostId = lib.mkOption {
                 type = types.ints.between 2 254;
                 description = ''
                   Client will be assigned an IPv4 address in format of
@@ -305,7 +305,7 @@ let
   };
   nameOption =
     name:
-    mkOption {
+    lib.mkOption {
       type = types.nonEmptyStr;
       default = name;
       description = ''
@@ -314,7 +314,7 @@ let
     };
   interfaceType =
     type:
-    mkOption {
+    lib.mkOption {
       type = types.enum [ type ];
       default = type;
       internal = true;
@@ -322,14 +322,14 @@ let
         Interface type
       '';
     };
-  priority = mkOption {
+  priority = lib.mkOption {
     type = types.ints.between 10 69;
     default = 10;
     description = ''
       The number prefix to use when creating systemd network for this interface
     '';
   };
-  subnetId = mkOption {
+  subnetId = lib.mkOption {
     type = types.ints.between 0 255;
     description = ''
       NixOS router uses this format for each interface's IP addresses:
@@ -339,35 +339,27 @@ let
     '';
   };
   nftables = {
-    inputChain = mkOption {
-      type = types.lines;
-      default = "";
-      description = ''
-        Nftable rules for the input chain of this interface
-      '';
+    chains = {
+      filter = {
+        ingress = hook "filter" "ingress";
+        prerouting = hook "filter" "prerouting";
+        forwardIn = hook "filter" "forward";
+        forwardOut = hook "filter" "forward";
+        input = hook "filter" "input";
+        output = hook "filter" "output";
+        postrouting = hook "filter" "postrouting";
+      };
+      nat = {
+        prerouting = hook "nat" "prerouting";
+        input = hook "nat" "input";
+        output = hook "nat" "output";
+        postrouting = hook "nat" "postrouting";
+      };
+      route = {
+        output = hook "route" "output";
+      };
     };
-    forwardChain = mkOption {
-      type = types.lines;
-      default = "";
-      description = ''
-        Nftable rules for the forward chain of this interface
-      '';
-    };
-    srcnatChain = mkOption {
-      type = types.lines;
-      default = "";
-      description = ''
-        Nftable rules for the dstnat chain of this interface
-      '';
-    };
-    dstnatChain = mkOption {
-      type = types.lines;
-      default = "";
-      description = ''
-        Nftable rules for the dstnat chain of this interface
-      '';
-    };
-    extraConfig = mkOption {
+    extraConfig = lib.mkOption {
       type = types.lines;
       default = "";
       description = ''
@@ -375,26 +367,49 @@ let
       '';
     };
   };
-  ports = mkOption {
+  hook =
+    chainType: hookType:
+    lib.genAttrs
+      (
+        [
+          "raw"
+          "mangle"
+          "filter"
+          "security"
+        ]
+        ++ lib.optional (hookType == "prerouting") "dstnat"
+        ++ lib.optional (hookType == "postrouting") "srcnat"
+      )
+      (
+        priority:
+        lib.mkOption {
+          type = types.lines;
+          default = "";
+          description = ''
+            Nftable rules for the ${chainType} chain and the ${hookType} hook with priority ${priority} for this interface
+          '';
+        }
+      );
+  ports = lib.mkOption {
     type = types.nonEmptyListOf types.nonEmptyStr;
     description = ''
       The ports this interface includes
     '';
   };
   quarantine = {
-    enable = mkEnableOption "qurantine on this interface";
+    enable = lib.mkEnableOption "qurantine on this interface";
   };
 in
 {
   options.router = {
-    enable = mkEnableOption "NixOS Router";
-    ulaPrefix = mkOption {
+    enable = lib.mkEnableOption "NixOS Router";
+    ulaPrefix = lib.mkOption {
       type = types.nonEmptyStr;
       description = ''
         [IPv6 ULA Prefix](https://en.wikipedia.org/wiki/Unique_local_address) to use
       '';
     };
-    ipv4SubnetId = mkOption {
+    ipv4SubnetId = lib.mkOption {
       type = types.ints.between 0 255;
       description = ''
         NixOS router uses this format for each interface's IPv4 address:
@@ -402,21 +417,21 @@ in
         10.''${ipv4SubnetId}.''${interface.subnetId}.1
       '';
     };
-    hostNameAliases = mkOption {
+    hostNameAliases = lib.mkOption {
       type = types.listOf types.nonEmptyStr;
       default = [ ];
       description = ''
         Additonal host names that resolve to the interface IPs
       '';
     };
-    interfacePortPriority = mkOption {
+    interfacePortPriority = lib.mkOption {
       type = types.ints.between 1 99;
       default = 10;
       description = ''
         The number prefix to use when creating systemd network for an interface port
       '';
     };
-    interfaces = mkOption {
+    interfaces = lib.mkOption {
       type = types.attrsOf (oneOfSubmodules {
         bridge = bridgeType;
         vlan = vlanType;
@@ -427,7 +442,7 @@ in
         Network interfaces to create
       '';
     };
-    ipv6 = mkOption {
+    ipv6 = lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;
@@ -458,7 +473,7 @@ in
           lib.optionalString (interfaceIdString != "0") interfaceIdString
         }${lib.optionalString (prefixLength != null) "/${toString prefixLength}"}";
     };
-    ipv4 = mkOption {
+    ipv4 = lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;
@@ -472,7 +487,7 @@ in
           lib.optionalString (prefixLength != null) "/${toString prefixLength}"
         }";
     };
-    concatMapInterfaceAttrs = mkOption {
+    concatMapInterfaceAttrs = lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;
@@ -482,7 +497,7 @@ in
           _: interface: lib.optionalAttrs (filter interface) (f interface)
         ) config.router.interfaces;
     };
-    concatMapInterfaces = mkOption {
+    concatMapInterfaces = lib.mkOption {
       type = functionType;
       internal = true;
       readOnly = true;

@@ -1,29 +1,116 @@
 {
   lib,
-  lib',
+  nixosRouterLib,
   config,
   ...
 }:
 let
+  lib' = nixosRouterLib;
   cfg = config.router;
-  concatMapWanAttrs = config.router.concatMapInterfaceAttrs ({ type, ... }: type == "wan");
-  # TODO: Once multi-wan is supported this should be updated
-  concatMapWans = config.router.concatMapInterfaces ({ type, ... }: type == "wan");
-  wanNames = concatMapWans ({ name, ... }: [ name ]);
+  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.router.interfaces;
+  quarantineInterfaces = lib.filterAttrs (
+    _: interface: interface.quarantine.enable or false
+  ) config.router.interfaces;
+  table =
+    {
+      useIfname ? false,
+    }:
+    interface:
+    let
+      iif = if useIfname then "iifname" else "iif";
+      oif = if useIfname then "oifname" else "oif";
+    in
+    lib.nameValuePair "interface-${interface.name}" {
+      family = "inet";
+      content = lib.concatLines (
+        lib'.concatMapAttrsToList (
+          chainType: hooks:
+          lib'.concatMapAttrsToList
+            (
+              hookType: chain:
+              lib'.concatMapAttrsToList (
+                priority: rules:
+                if hookType == "forward" then
+                  lib.optional (rules.inRules != "" || rules.outRules != "") ''
+                    chain ${chainType}-${hookType}-${priority} {
+                      type ${chainType} hook ${hookType} priority ${priority};
+                      ${lib.concatLines (
+                        lib.optional (rules.inRules != "") ''
+                          ${iif} "${interface.name}" jump ${chainType}-forwardIn-${priority}-interface
+                        ''
+                        ++ lib.optional (rules.outRules != "") ''
+                          ${oif} "${interface.name}" jump ${chainType}-forwardOut-${priority}-interface
+                        ''
+                      )}
+                    }
+                    ${lib.concatLines (
+                      lib.optional (rules.inRules != "") ''
+                        chain ${chainType}-forwardIn-${priority}-interface {
+                          ${rules.inRules}
+                        }
+                      ''
+                      ++ lib.optional (rules.outRules != "") ''
+                        chain ${chainType}-forwardOut-${priority}-interface {
+                          ${rules.outRules}
+                        }
+                      ''
+                    )}
+                  ''
+                else
+                  lib.optional (rules != "") ''
+                    chain ${chainType}-${hookType}-${priority} {
+                      type ${chainType} hook ${hookType} priority ${priority};
+                      ${
+                        {
+                          ingress = iif;
+                          prerouting = iif;
+                          input = iif;
+                          output = oif;
+                          postrouting = oif;
+                        }
+                        .${hookType}
+                      } ${interface.name} jump ${chainType}-${hookType}-${priority}-interface
+                    }
+                    chain ${chainType}-${hookType}-${priority}-interface {
+                      ${rules}
+                    }
+                  ''
+              ) chain
+            )
+            (
+              # push down in and out to rules
+              lib.removeAttrs hooks [
+                "forwardIn"
+                "forwardOut"
+              ]
+              // lib.optionalAttrs (hooks ? forwardIn) {
+                forward = lib.mapAttrs (priority: rules: {
+                  inRules = rules;
+                  outRules = hooks.forwardOut.${priority};
+                }) hooks.forwardIn;
+              }
+            )
+        ) interface.nftables.chains
+        ++ [ interface.nftables.extraConfig ]
+      );
+    };
 in
 {
   config = lib.mkIf cfg.enable {
     networking.nftables.tables =
-      config.router.concatMapInterfaceAttrs (interface: interface.quarantine.enable or false)
-        (interface: {
-          "interface-${interface.name}" = {
-            family = "inet";
-            content = ''
-              chain input {
-                type filter hook input priority filter;
-                iifname "${interface.name}" jump input-interface
-              }
-              chain input-interface {
+      lib.mapAttrs' (
+        _: interface:
+        table { } (
+          lib.updateManyAttrsByPath [
+            {
+              path = [
+                "nftables"
+                "chains"
+                "filter"
+                "input"
+                "filter"
+              ];
+              update = rules: ''
                 ct state vmap { established : accept, related : accept }
                 fib daddr type { broadcast, multicast } accept
                 ip daddr != ${interface.ipv4 { hostId = 1; }} drop
@@ -36,168 +123,101 @@ in
                 icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply, nd-router-solicit, nd-router-advert } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6-Input"
                 icmpv6 type . icmpv6 code { packet-too-big . 0, parameter-problem . 0, nd-neighbor-solicit . 0, nd-neighbor-advert . 0, parameter-problem . 1 } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6 Input"
                 udp dport 53 accept comment "Allow DNS"
-                ${interface.nftables.inputChain}
+                ${rules}
                 drop
-              }
-
-              chain forward {
-                type filter hook forward priority filter;
-                iifname "${interface.name}" jump forward-interface
-              }
-              chain forward-interface {
-                ct state vmap { established : accept, related : accept }
-                ${interface.nftables.forwardChain}
-                oifname {${lib.concatMapStringsSep "," (n: "\"${n}\"") wanNames}} accept
-                drop
-              }
-
-              ${lib.optionalString (interface.nftables.srcnatChain != "") ''
-                chain srcnat {
-                  type nat hook postrouting priority srcnat;
-                  oifname "${interface.name}" jump srcnat-interface
-                }
-                chain srcnat-interface {
-                  ${interface.nftables.srcnatChain}
-                }
-              ''}
-
-              ${lib.optionalString (interface.nftables.dstnatChain != "") ''
-                chain dstnat {
-                  type nat hook prerouting priority dstnat;
-                  iifname "${interface.name}" jump dstnat-interface
-                }
-                chain dstnat-interface {
-                  ${interface.nftables.dstnatChain}
-                }
-              ''}
-
-              ${interface.nftables.extraConfig}
-            '';
-          };
-        })
-      //
-        config.router.concatMapInterfaceAttrs (interface: !(interface.quarantine.enable or false))
-          (interface: {
-            "interface-${interface.name}" = {
-              family = "inet";
-              content = ''
-                ${lib.optionalString (interface.nftables.inputChain != "") ''
-                  chain input {
-                    type filter hook input priority filter;
-                    iifname "${interface.name}" jump input-interface
-                  }
-                  chain input-interface {
-                    ${interface.nftables.inputChain}
-                  }
-                ''}
-
-                ${lib.optionalString (interface.nftables.forwardChain != "") ''
-                  chain forward {
-                    type filter hook forward priority filter;
-                    iifname "${interface.name}" jump forward-interface
-                  }
-                  chain forward-interface {
-                    ${interface.nftables.forwardChain}
-                  }
-                ''}
-
-                ${lib.optionalString (interface.nftables.srcnatChain != "") ''
-                  chain srcnat {
-                    type nat hook postrouting priority srcnat;
-                    oifname "${interface.name}" jump srcnat-interface
-                  }
-                  chain srcnat-interface {
-                    ${interface.nftables.srcnatChain}
-                  }
-                ''}
-
-                ${lib.optionalString (interface.nftables.dstnatChain != "") ''
-                  chain dstnat {
-                    type nat hook prerouting priority dstnat;
-                    iifname "${interface.name}" jump dstnat-interface
-                  }
-                  chain dstnat-interface {
-                    ${interface.nftables.dstnatChain}
-                  }
-                ''}
-
-                ${interface.nftables.extraConfig}
               '';
-            };
-          })
-      // concatMapWanAttrs (interface: {
-        "interface-${interface.name}" = {
-          family = "inet";
-          content = ''
-            chain input {
-              type filter hook input priority filter;
-              iifname "${interface.name}" jump input-interface
             }
-            chain input-interface {
-              ct state vmap { established : accept, related : accept }
-              meta nfproto ipv4 udp sport 67 udp dport 68 accept comment "Allow DHCP"
-              meta nfproto ipv6 udp sport 547 udp dport 546 accept comment "Allow DHCPv6"
-              icmp type echo-request accept comment "Allow Ping"
-              meta nfproto ipv4 meta l4proto igmp accept comment "Allow IGMP"
-              ip6 saddr fe80::/10 icmpv6 type . icmpv6 code { mld-listener-query . no-route, mld-listener-report . no-route, mld-listener-done . no-route, mld2-listener-report . no-route } accept comment "Allow MLD"
-              icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply, nd-router-solicit, nd-router-advert } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6-Input"
-              icmpv6 type . icmpv6 code { packet-too-big . no-route, parameter-problem . no-route, nd-neighbor-solicit . no-route, nd-neighbor-advert . no-route, parameter-problem . admin-prohibited } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6 Input"
-              ${interface.nftables.inputChain}
-              ct status dnat accept
-              drop
+            {
+              path = [
+                "nftables"
+                "chains"
+                "filter"
+                "forwardIn"
+                "filter"
+              ];
+              update = rules: ''
+                ct state vmap { established : accept, related : accept }
+                oifname {${
+                  lib.concatStringsSep "," (lib.mapAttrsToList (_: interface: "\"${interface.name}\"") wanInterfaces)
+                }} accept
+                ${rules}
+                drop
+              '';
             }
-
-            chain mangle {
-              type filter hook forward priority mangle;
-              oifname "${interface.name}" jump mangle-interface
-            }
-            chain mangle-interface {
-              tcp flags syn tcp option maxseg size set rt mtu
-            }
-
-            chain mangle-output {
-              type filter hook output priority mangle;
-              oifname "${interface.name}" jump mangle-output-interface
-            }
-            chain mangle-output-interface {
-              tcp flags syn tcp option maxseg size set rt mtu
-            }
-
-            chain forward {
-              type filter hook forward priority filter;
-              iifname "${interface.name}" jump forward-interface
-            }
-            chain forward-interface {
-              ct state vmap { established : accept, related : accept }
-              icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6 Forward"
-              icmpv6 type . icmpv6 code { packet-too-big . no-route, parameter-problem . no-route, parameter-problem . admin-prohibited } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6 Forward"
-              ${interface.nftables.forwardChain}
-              ct status dnat accept
-              drop
-            }
-
-            chain srcnat {
-              type nat hook postrouting priority srcnat;
-              oifname "${interface.name}" jump srcnat-interface
-            }
-            chain srcnat-interface {
-              meta nfproto ipv4 masquerade
-              ${interface.nftables.srcnatChain}
-            }
-
-            ${lib.optionalString (interface.nftables.dstnatChain != "") ''
-              chain dstnat {
-                type nat hook prerouting priority dstnat;
-                iifname "${interface.name}" jump dstnat-interface
+          ] interface
+        )
+      ) quarantineInterfaces
+      // lib.mapAttrs' (
+        _: interface:
+        table
+          {
+            useIfname = interface.connectionType == "pppoe";
+          }
+          (
+            lib.updateManyAttrsByPath [
+              {
+                path = [
+                  "nftables"
+                  "chains"
+                  "filter"
+                  "input"
+                  "filter"
+                ];
+                update = rules: ''
+                  ct state vmap { established : accept, related : accept }
+                  meta nfproto ipv4 udp sport 67 udp dport 68 accept comment "Allow DHCP"
+                  meta nfproto ipv6 udp sport 547 udp dport 546 accept comment "Allow DHCPv6"
+                  icmp type echo-request accept comment "Allow Ping"
+                  meta nfproto ipv4 meta l4proto igmp accept comment "Allow IGMP"
+                  ip6 saddr fe80::/10 icmpv6 type . icmpv6 code { mld-listener-query . no-route, mld-listener-report . no-route, mld-listener-done . no-route, mld2-listener-report . no-route } accept comment "Allow MLD"
+                  icmpv6 type { destination-unreachable, time-exceeded, echo-request, echo-reply, nd-router-solicit, nd-router-advert } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6-Input"
+                  icmpv6 type . icmpv6 code { packet-too-big . no-route, parameter-problem . no-route, nd-neighbor-solicit . no-route, nd-neighbor-advert . no-route, parameter-problem . admin-prohibited } limit rate 1000/second burst 5 packets accept comment "Allow ICMPv6 Input"
+                  ${rules}
+                  ct status dnat accept
+                  drop
+                '';
               }
-              chain dstnat-interface {
-                ${interface.nftables.dstnatChain}
+              {
+                path = [
+                  "nftables"
+                  "chains"
+                  "filter"
+                  "forwardOut"
+                  "mangle"
+                ];
+                update = rules: ''
+                  tcp flags syn tcp option maxseg size set rt mtu
+                  ${rules}
+                '';
               }
-            ''}
-
-            ${interface.nftables.extraConfig}
-          '';
-        };
-      });
+              {
+                path = [
+                  "nftables"
+                  "chains"
+                  "filter"
+                  "output"
+                  "mangle"
+                ];
+                update = rules: ''
+                  tcp flags syn tcp option maxseg size set rt mtu
+                  ${rules}
+                '';
+              }
+              {
+                path = [
+                  "nftables"
+                  "chains"
+                  "nat"
+                  "postrouting"
+                  "srcnat"
+                ];
+                update = rules: ''
+                  meta nfproto ipv4 masquerade
+                  ${rules}
+                '';
+              }
+            ] interface
+          )
+      ) wanInterfaces;
   };
 }
