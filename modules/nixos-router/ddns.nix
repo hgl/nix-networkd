@@ -7,7 +7,7 @@
 }:
 let
   lib' = nixosRouterLib;
-  concatMapWanAttrs = config.router.concatMapInterfaceAttrs ({ type, ... }: type == "wan");
+  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.router.interfaces;
   update-ddns =
     ipVer: domain:
     { zoneIdFile, apiTokenFile, ... }:
@@ -60,8 +60,8 @@ in
   config = lib.mkIf config.router.enable {
     services.networkd-ipmon = {
       enable = true;
-      rules = concatMapWanAttrs (
-        interface:
+      rules = lib.concatMapAttrs (
+        _: interface:
         lib'.concatMapListToAttrs (
           ddns:
           lib.optionalAttrs (ddns.enable == true || (ddns.enable == "ipv6")) {
@@ -79,7 +79,7 @@ in
             };
           }
         ) interface.ddns
-      );
+      ) wanInterfaces;
     };
   };
 }

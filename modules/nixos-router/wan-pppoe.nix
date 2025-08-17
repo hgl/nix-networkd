@@ -4,17 +4,14 @@
   ...
 }:
 let
-  concatMapWanAttrs = config.router.concatMapInterfaceAttrs (
-    interface: interface.type == "wan" && interface.connectionType == "pppoe"
-  );
-  concatMapWans = config.router.concatMapInterfaces (
-    interface: interface.type == "wan" && interface.connectionType == "pppoe"
-  );
+  wanInterfaces = lib.filterAttrs (
+    _: interface: interface.type == "wan" && interface.connectionType == "pppoe"
+  ) config.router.interfaces;
 in
 {
   config = lib.mkIf config.router.enable {
     systemd.network = {
-      networks = concatMapWanAttrs (interface: {
+      networks = lib.concatMapAttrs (_: interface: {
         # This is required to bring the interface up
         "${toString config.router.interfacePortPriority}-${interface.port}" = {
           matchConfig = {
@@ -50,12 +47,12 @@ in
             UseDNS = config.networking.nameservers == [ ];
           };
         };
-      });
+      }) wanInterfaces;
     };
 
     services.pppd = {
       enable = true;
-      peers = concatMapWanAttrs (interface: {
+      peers = lib.concatMapAttrs (_: interface: {
         "interface-${interface.name}".config = ''
           plugin pppoe.so
           nic-${interface.port}
@@ -72,15 +69,17 @@ in
           up_sdnotify
           name ${interface.pppoeUsername}
         '';
-      });
+      }) wanInterfaces;
     };
-    systemd.services = concatMapWanAttrs (interface: {
+    systemd.services = lib.concatMapAttrs (_: interface: {
       "pppd-interface-${interface.name}".serviceConfig.Type = "notify";
-    });
+    }) wanInterfaces;
     environment.etc."ppp/pap-secrets" = {
       mode = "0600";
       text = lib.concatLines (
-        concatMapWans (interface: [ "${interface.pppoeUsername} * @${interface.pppoePasswordPath} *" ])
+        lib.mapAttrsToList (
+          _: interface: "${interface.pppoeUsername} * @${interface.pppoePasswordPath} *"
+        ) wanInterfaces
       );
     };
   };

@@ -4,15 +4,14 @@
   ...
 }:
 let
-  concatMapXfrmAttrs = config.router.concatMapInterfaceAttrs ({ type, ... }: type == "xfrm");
-  concatMapXfrms = config.router.concatMapInterfaces ({ type, ... }: type == "xfrm");
+  xfrmInterfaces = lib.filterAttrs (_: interface: interface.type == "xfrm") config.router.interfaces;
 in
-
 {
   config = lib.mkIf config.router.enable {
     systemd.network = {
-      netdevs = concatMapXfrmAttrs (interface: {
-        "${toString interface.priority}-${interface.name}" = {
+      netdevs = lib.mapAttrs' (
+        _: interface:
+        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
           netdevConfig = {
             Name = interface.name;
             Kind = "xfrm";
@@ -20,8 +19,8 @@ in
           xfrmConfig = {
             InterfaceId = interface.xfrmId;
           };
-        };
-      });
+        }
+      ) xfrmInterfaces;
       networks =
         {
           "${toString config.router.interfacePortPriority}-lo" = {
@@ -29,12 +28,13 @@ in
               Name = "lo";
             };
             networkConfig = {
-              Xfrm = concatMapXfrms (interface: [ interface.name ]);
+              Xfrm = lib.mapAttrsToList (_: interface: interface.name) xfrmInterfaces;
             };
           };
         }
-        // concatMapXfrmAttrs (interface: {
-          "${toString interface.priority}-${interface.name}" = {
+        // lib.mapAttrs' (
+          _: interface:
+          lib.nameValuePair "${toString interface.priority}-${interface.name}" {
             matchConfig = {
               Name = interface.name;
             };
@@ -58,8 +58,8 @@ in
                 DuplicateAddressDetection = "none";
               }
             ];
-          };
-        });
+          }
+        ) xfrmInterfaces;
     };
   };
 }

@@ -6,13 +6,13 @@
 }:
 let
   lib' = nixosRouterLib;
-  concatMapVlanAttrs = config.router.concatMapInterfaceAttrs ({ type, ... }: type == "vlan");
+  vlanInterfaces = lib.filterAttrs (_: interface: interface.type == "vlan") config.router.interfaces;
 in
 {
   config = lib.mkIf config.router.enable {
     systemd.network = {
-      netdevs = concatMapVlanAttrs (
-        interface:
+      netdevs = lib.concatMapAttrs (
+        _: interface:
         {
           "${toString interface.priority}-${interface.name}" = {
             netdevConfig = {
@@ -33,9 +33,9 @@ in
             };
           }
         ) interface.ports
-      );
-      networks = concatMapVlanAttrs (
-        interface:
+      ) vlanInterfaces;
+      networks = lib.concatMapAttrs (
+        _: interface:
         {
           "${toString interface.priority}-${interface.name}" = {
             matchConfig = {
@@ -96,7 +96,7 @@ in
               };
             }
         ) interface.ports
-      );
+      ) vlanInterfaces;
     };
   };
 }

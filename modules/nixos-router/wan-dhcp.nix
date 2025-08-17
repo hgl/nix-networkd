@@ -4,15 +4,16 @@
   ...
 }:
 let
-  concatMapWanAttrs = config.router.concatMapInterfaceAttrs (
-    interface: interface.type == "wan" && interface.connectionType or null == "dhcp"
-  );
+  wanInterfaces = lib.filterAttrs (
+    _: interface: interface.type == "wan" && interface.connectionType == "dhcp"
+  ) config.router.interfaces;
 in
 {
   config = lib.mkIf config.router.enable {
     systemd.network = {
-      links = concatMapWanAttrs (interface: {
-        "${toString interface.priority}-${interface.name}" = {
+      links = lib.mapAttrs' (
+        _: interface:
+        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
           matchConfig = {
             # can't use OriginalName here because it sometimes doesn't work
             # https://github.com/systemd/systemd/issues/24975#issuecomment-1276669267
@@ -21,10 +22,11 @@ in
           linkConfig = {
             Name = interface.name;
           };
-        };
-      });
-      networks = concatMapWanAttrs (interface: {
-        "${toString interface.priority}-${interface.name}" = {
+        }
+      ) wanInterfaces;
+      networks = lib.mapAttrs' (
+        _: interface:
+        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
           matchConfig = {
             Name = interface.name;
           };
@@ -41,8 +43,8 @@ in
           dhcpV6Config = {
             UseDNS = config.networking.nameservers == [ ];
           };
-        };
-      });
+        }
+      ) wanInterfaces;
     };
   };
 }

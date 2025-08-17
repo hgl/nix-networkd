@@ -6,32 +6,36 @@
 }:
 let
   lib' = nixosRouterLib;
-  concatMapBridgeAttrs = config.router.concatMapInterfaceAttrs ({ type, ... }: type == "bridge");
+  bridgeInterfaces = lib.filterAttrs (
+    _: interface: interface.type == "bridge"
+  ) config.router.interfaces;
 in
 {
   config = lib.mkIf config.router.enable {
     systemd.network = {
-      netdevs = concatMapBridgeAttrs (interface: {
-        "${toString interface.priority}-${interface.name}" = {
+      netdevs = lib.mapAttrs' (
+        _: interface:
+        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
           netdevConfig = {
             Name = interface.name;
             Kind = "bridge";
             MACAddress = "none";
           };
-        };
-      });
-      links = concatMapBridgeAttrs (interface: {
-        "${toString interface.priority}-${interface.name}" = {
+        }
+      ) bridgeInterfaces;
+      links = lib.mapAttrs' (
+        _: interface:
+        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
           matchConfig = {
             OriginalName = interface.name;
           };
           linkConfig = {
             MACAddressPolicy = "none";
           };
-        };
-      });
-      networks = concatMapBridgeAttrs (
-        interface:
+        }
+      ) bridgeInterfaces;
+      networks = lib.concatMapAttrs (
+        _: interface:
         {
           "${toString interface.priority}-${interface.name}" = {
             matchConfig = {
@@ -80,7 +84,7 @@ in
             };
           }
         ) interface.ports
-      );
+      ) bridgeInterfaces;
     };
   };
 }

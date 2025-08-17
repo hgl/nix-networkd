@@ -487,25 +487,5 @@ in
           lib.optionalString (prefixLength != null) "/${toString prefixLength}"
         }";
     };
-    concatMapInterfaceAttrs = lib.mkOption {
-      type = functionType;
-      internal = true;
-      readOnly = true;
-      default =
-        filter: f:
-        lib.concatMapAttrs (
-          _: interface: lib.optionalAttrs (filter interface) (f interface)
-        ) config.router.interfaces;
-    };
-    concatMapInterfaces = lib.mkOption {
-      type = functionType;
-      internal = true;
-      readOnly = true;
-      default =
-        filter: f:
-        lib'.concatMapAttrsToList (
-          _: interface: lib.optionals (filter interface) (f interface)
-        ) config.router.interfaces;
-    };
   };
 }

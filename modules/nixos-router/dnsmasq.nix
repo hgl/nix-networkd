@@ -21,9 +21,9 @@ let
     listsAsDuplicateKeys = true;
   };
   conf = settingsFormat.generate "dnsmasq.conf" cfg.settings;
-  concatMapDnsInterfaces = config.router.concatMapInterfaces (
-    interface: interface.dns.enable or false
-  );
+  dnsInterfaces = lib.filterAttrs (
+    _: interface: interface.dns.enable or false
+  ) config.router.interfaces;
 in
 {
   config = lib.mkIf config.router.enable {
@@ -42,12 +42,12 @@ in
       dns-forward-max = 1000;
       enable-ra = true;
       server = [ "127.0.0.53" ];
-      interface = concatMapDnsInterfaces (interface: [ interface.name ]);
-      no-dhcp-interface = concatMapDnsInterfaces (
-        interface: lib.optional (!(interface.dhcpServer.enable or false)) interface.name
-      );
-      dhcp-range = concatMapDnsInterfaces (
-        interface:
+      interface = lib.attrNames dnsInterfaces;
+      no-dhcp-interface = lib'.concatMapAttrsToList (
+        _: interface: lib.optional (!(interface.dhcpServer.enable or false)) interface.name
+      ) dnsInterfaces;
+      dhcp-range = lib'.concatMapAttrsToList (
+        _: interface:
         lib.optionals (interface.dhcpServer.enable or false) [
           "::,constructor:${interface.name},slaac,7d"
           (lib.concatStringsSep "," [
@@ -55,9 +55,9 @@ in
             interface.dhcpServer.poolv4.endIp
           ])
         ]
-      );
-      interface-name = concatMapDnsInterfaces (
-        interface:
+      ) dnsInterfaces;
+      interface-name = lib'.concatMapAttrsToList (
+        _: interface:
         lib.optionals (!(interface.quarantine.enable or false)) (
           map (domain: "${domain},${interface.name}") (
             [
@@ -67,16 +67,16 @@ in
             ++ config.router.hostNameAliases
           )
         )
-      );
-      dhcp-host = concatMapDnsInterfaces (
-        interface:
+      ) dnsInterfaces;
+      dhcp-host = lib'.concatMapAttrsToList (
+        _: interface:
         lib'.concatMapAttrsToList (
           _: lease:
           lib.optional lease.enable "${lease.hostName},${lease.macAddress},${
             interface.ipv4 { inherit (lease) hostId; }
           }"
         ) interface.dhcpServer.staticLeases or { }
-      );
+      ) dnsInterfaces;
     };
     services.dbus.packages = [ cfg.package ];
     users.users.dnsmasq = {
