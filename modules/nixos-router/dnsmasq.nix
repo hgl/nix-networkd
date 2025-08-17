@@ -24,6 +24,11 @@ let
   dnsInterfaces = lib.filterAttrs (
     _: interface: interface.dns.enable or false
   ) config.router.interfaces;
+  adguardhome =
+    let
+      inherit (config.services.adguardhome.settings.dns) bind_hosts port;
+    in
+    "${lib.head bind_hosts}#${toString port}";
 in
 {
   config = lib.mkIf config.router.enable {
@@ -41,7 +46,14 @@ in
       rebind-localhost-ok = true;
       dns-forward-max = 1000;
       enable-ra = true;
-      server = [ "127.0.0.53" ];
+      server =
+        if config.services.adguardhome.enable then
+          [ adguardhome ]
+        else if config.networking.nameservers != [ ] then
+          config.networking.nameservers
+        else
+          # TODO: get upstream dns servers from networkd and pppd in systemd.services.preStart
+          [ ];
       interface = lib.attrNames dnsInterfaces;
       no-dhcp-interface = lib'.concatMapAttrsToList (
         _: interface: lib.optional (!(interface.dhcpServer.enable or false)) interface.name
@@ -114,9 +126,7 @@ in
       "f ${stateDir}/dnsmasq.leases - ${config.users.users.dnsmasq.name} ${config.users.users.dnsmasq.group}"
     ];
 
-    # resolved set this file with default override priority, set it one less
-    # so it's still overridable with mkForce
-    environment.etc."resolv.conf".text = lib.mkOverride (lib.modules.defaultOverridePriority - 1) ''
+    environment.etc."resolv.conf".text = ''
       ${lib.optionalString config.networking.enableIPv6 "nameserver ::1"}
       nameserver 127.0.0.1
       options edns0 trust-ad

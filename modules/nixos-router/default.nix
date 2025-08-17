@@ -17,8 +17,6 @@ in
     ./options.nix
     ./dnsmasq.nix
     ./tailscale.nix
-    ./resolved-module.nix
-    ./resolved.nix
     ./adguardhome.nix
     ./bridge.nix
     ./vlan.nix
@@ -40,5 +38,8 @@ in
       nftables.enable = true;
     };
     systemd.network.enable = true;
+    # Enables by systemd.network.enable
+    # We use dnsmasq instead
+    services.resolved.enable = false;
   };
 }
