@@ -42,7 +42,7 @@ in
       expand-hosts = true;
       bogus-priv = true;
       enable-dbus = true;
-      stop-dns-rebind = true;
+      stop-dns-rebind = lib.mkDefault true;
       rebind-localhost-ok = true;
       dns-forward-max = 1000;
       enable-ra = true;
