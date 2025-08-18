@@ -32,8 +32,5 @@ in
       nftables.enable = true;
     };
     systemd.network.enable = true;
-    # Enables by systemd.network.enable
-    # We use dnsmasq instead
-    services.resolved.enable = false;
   };
 }
