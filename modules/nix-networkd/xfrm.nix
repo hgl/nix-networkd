@@ -4,7 +4,9 @@
   ...
 }:
 let
-  xfrmInterfaces = lib.filterAttrs (_: interface: interface.type == "xfrm") config.router.interfaces;
+  xfrmInterfaces = lib.filterAttrs (
+    _: interface: interface.type == "xfrm"
+  ) config.networkd.interfaces;
 in
 {
   config = {
@@ -23,7 +25,7 @@ in
       ) xfrmInterfaces;
       networks =
         {
-          "${toString config.router.interfacePortPriority}-lo" = {
+          "${toString config.networkd.interfacePortPriority}-lo" = {
             matchConfig = {
               Name = "lo";
             };

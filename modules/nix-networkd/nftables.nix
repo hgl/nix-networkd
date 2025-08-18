@@ -1,15 +1,15 @@
 {
   lib,
-  nixosRouterLib,
+  nixNetworkdLib,
   config,
   ...
 }:
 let
-  lib' = nixosRouterLib;
-  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.router.interfaces;
+  lib' = nixNetworkdLib;
+  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.networkd.interfaces;
   quarantineInterfaces = lib.filterAttrs (
     _: interface: interface.quarantine.enable or false
-  ) config.router.interfaces;
+  ) config.networkd.interfaces;
   table =
     {
       useIfname ? false,

@@ -6,14 +6,14 @@
 let
   wanInterfaces = lib.filterAttrs (
     _: interface: interface.type == "wan" && interface.connectionType == "pppoe"
-  ) config.router.interfaces;
+  ) config.networkd.interfaces;
 in
 {
   config = {
     systemd.network = {
       networks = lib.concatMapAttrs (_: interface: {
         # This is required to bring the interface up
-        "${toString config.router.interfacePortPriority}-${interface.port}" = {
+        "${toString config.networkd.interfacePortPriority}-${interface.port}" = {
           matchConfig = {
             Name = interface.port;
           };

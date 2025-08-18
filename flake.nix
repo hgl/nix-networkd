@@ -22,8 +22,8 @@
     {
       lib = lib';
       nixosModules = {
-        default = self.nixosModules.nixos-router;
-        nixos-router = import ./modules/nixos-router {
+        default = self.nixosModules.nix-networkd;
+        nix-networkd = import ./modules/nix-networkd {
           inherit networkd-ipmon;
         };
       };

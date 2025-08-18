@@ -24,7 +24,7 @@ in
     ./ddns.nix
   ];
   config = {
-    _module.args.nixosRouterLib = lib';
+    _module.args.nixNetworkdLib = lib';
     networking = {
       useDHCP = false;
       firewall.enable = false;

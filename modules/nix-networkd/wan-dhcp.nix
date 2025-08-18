@@ -6,7 +6,7 @@
 let
   wanInterfaces = lib.filterAttrs (
     _: interface: interface.type == "wan" && interface.connectionType == "dhcp"
-  ) config.router.interfaces;
+  ) config.networkd.interfaces;
 in
 {
   config = {

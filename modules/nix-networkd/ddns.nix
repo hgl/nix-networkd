@@ -1,13 +1,13 @@
 {
   lib,
-  nixosRouterLib,
+  nixNetworkdLib,
   config,
   pkgs,
   ...
 }:
 let
-  lib' = nixosRouterLib;
-  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.router.interfaces;
+  lib' = nixNetworkdLib;
+  wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.networkd.interfaces;
   update-ddns =
     ipVer: domain:
     { zoneIdFile, apiTokenFile, ... }:

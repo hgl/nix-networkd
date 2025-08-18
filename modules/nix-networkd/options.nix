@@ -1,11 +1,11 @@
 {
   lib,
-  nixosRouterLib,
+  nixNetworkdLib,
   config,
   ...
 }:
 let
-  lib' = nixosRouterLib;
+  lib' = nixNetworkdLib;
   inherit (lib) types;
   functionType = lib.mkOptionType {
     name = "function";
@@ -217,7 +217,7 @@ let
       type = functionType;
       internal = true;
       readOnly = true;
-      default = args: config.router.ipv6 (args // { inherit (interface) subnetId; });
+      default = args: config.networkd.ipv6 (args // { inherit (interface) subnetId; });
     };
   ipv4 =
     interface:
@@ -225,7 +225,7 @@ let
       type = functionType;
       internal = true;
       readOnly = true;
-      default = args: config.router.ipv4 (args // { inherit (interface) subnetId; });
+      default = args: config.networkd.ipv4 (args // { inherit (interface) subnetId; });
     };
   poolv4 = interface: pool: {
     range = lib.mkOption {
@@ -290,7 +290,7 @@ let
                 description = ''
                   Client will be assigned an IPv4 address in format of
 
-                  10.''${router.ipv4SubnetId}.''${interface.subnetId}.''${hostId}
+                  ''${ipv4Prefix}.''${interface.subnetId}.''${hostId}
                 '';
               };
             };
@@ -332,10 +332,10 @@ let
   subnetId = lib.mkOption {
     type = types.ints.between 0 255;
     description = ''
-      NixOS router uses this format for each interface's IP addresses:
+      Each interface takes an IP address like this:
 
-      IPv4: 10.''${router.ipv4SubnetId}.''${subnetId}.1
-      IPv6: ''${router.ulaPrefix}:''${toHex subnetId}::1
+      IPv6: ''${ulaPrefix}:''${toHex subnetId}::1
+      IPv4: ''${ipv4Prefix}.''${subnetId}.1
     '';
   };
   nftables = {
@@ -401,7 +401,7 @@ let
   };
 in
 {
-  options.router = {
+  options.networkd = {
     ulaPrefix = lib.mkOption {
       type = types.nonEmptyStr;
       description = ''
@@ -451,7 +451,7 @@ in
       readOnly = true;
       default =
         let
-          ipv6Prefix = lib.removeSuffix "::/48" config.router.ulaPrefix;
+          ipv6Prefix = lib.removeSuffix "::/48" config.networkd.ulaPrefix;
         in
         {
           subnetId,
@@ -482,7 +482,7 @@ in
       readOnly = true;
       default =
         let
-          ipv4Prefix = lib.removeSuffix ".0.0/16" config.router.ipv4Prefix;
+          ipv4Prefix = lib.removeSuffix ".0.0/16" config.networkd.ipv4Prefix;
         in
         {
           subnetId,

@@ -1,39 +1,41 @@
 {
   lib,
-  nixosRouterLib,
+  nixNetworkdLib,
   config,
   ...
 }:
 let
-  lib' = nixosRouterLib;
-  bridgeInterfaces = lib.filterAttrs (
-    _: interface: interface.type == "bridge"
-  ) config.router.interfaces;
+  lib' = nixNetworkdLib;
+  vlanInterfaces = lib.filterAttrs (
+    _: interface: interface.type == "vlan"
+  ) config.networkd.interfaces;
 in
 {
   config = {
     systemd.network = {
-      netdevs = lib.mapAttrs' (
+      netdevs = lib.concatMapAttrs (
         _: interface:
-        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
-          netdevConfig = {
-            Name = interface.name;
-            Kind = "bridge";
-            MACAddress = "none";
+        {
+          "${toString interface.priority}-${interface.name}" = {
+            netdevConfig = {
+              Name = interface.name;
+              Kind = "bridge";
+            };
           };
         }
-      ) bridgeInterfaces;
-      links = lib.mapAttrs' (
-        _: interface:
-        lib.nameValuePair "${toString interface.priority}-${interface.name}" {
-          matchConfig = {
-            OriginalName = interface.name;
-          };
-          linkConfig = {
-            MACAddressPolicy = "none";
-          };
-        }
-      ) bridgeInterfaces;
+        // lib'.mapListToAttrs (
+          port:
+          lib.nameValuePair "${toString config.networkd.interfacePortPriority}-${port}" {
+            netdevConfig = {
+              Name = "${port}.${toString interface.vlanId}";
+              Kind = "vlan";
+            };
+            vlanConfig = {
+              Id = interface.vlanId;
+            };
+          }
+        ) interface.ports
+      ) vlanInterfaces;
       networks = lib.concatMapAttrs (
         _: interface:
         {
@@ -46,7 +48,6 @@ in
               IPv6AcceptRA = false;
               IPv6SendRA = false;
               DHCPPrefixDelegation = true;
-              MulticastDNS = !interface.quarantine.enable;
             };
             addresses = [
               {
@@ -75,16 +76,29 @@ in
         }
         // lib'.mapListToAttrs (
           port:
-          lib.nameValuePair "${toString config.router.interfacePortPriority}-${port}" {
+          lib.nameValuePair "${toString config.networkd.interfacePortPriority}-${port}" {
             matchConfig = {
               Name = port;
             };
             networkConfig = {
-              Bridge = interface.name;
+              VLAN = "${port}.${toString interface.vlanId}";
             };
           }
         ) interface.ports
-      ) bridgeInterfaces;
+        // lib'.mapListToAttrs (
+          port:
+          lib.nameValuePair
+            "${toString config.networkd.interfacePortPriority}-${port}.${toString interface.vlanId}"
+            {
+              matchConfig = {
+                Name = "${port}.${toString interface.vlanId}";
+              };
+              networkConfig = {
+                Bridge = interface.name;
+              };
+            }
+        ) interface.ports
+      ) vlanInterfaces;
     };
   };
 }
