@@ -9,7 +9,7 @@ let
   ) config.router.interfaces;
 in
 {
-  config = lib.mkIf config.router.enable {
+  config = {
     systemd.network = {
       networks = lib.concatMapAttrs (_: interface: {
         # This is required to bring the interface up
@@ -51,7 +51,7 @@ in
     };
 
     services.pppd = {
-      enable = true;
+      enable = wanInterfaces != { };
       peers = lib.concatMapAttrs (_: interface: {
         "interface-${interface.name}".config = ''
           plugin pppoe.so
@@ -59,7 +59,7 @@ in
           +ipv6
           nodetach
           ifname ${interface.name}
-          usepeerdns
+          ${lib.optionalString (config.networking.nameservers == [ ]) "usepeerdns"}
           defaultroute
           persist
           maxfail 0

@@ -11,7 +11,7 @@ let
   ) config.router.interfaces;
 in
 {
-  config = lib.mkIf config.router.enable {
+  config = {
     systemd.network = {
       netdevs = lib.mapAttrs' (
         _: interface:

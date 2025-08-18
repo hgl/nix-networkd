@@ -9,7 +9,7 @@ let
   vlanInterfaces = lib.filterAttrs (_: interface: interface.type == "vlan") config.router.interfaces;
 in
 {
-  config = lib.mkIf config.router.enable {
+  config = {
     systemd.network = {
       netdevs = lib.concatMapAttrs (
         _: interface:

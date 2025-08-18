@@ -402,19 +402,22 @@ let
 in
 {
   options.router = {
-    enable = lib.mkEnableOption "NixOS Router";
     ulaPrefix = lib.mkOption {
       type = types.nonEmptyStr;
       description = ''
         [IPv6 ULA Prefix](https://en.wikipedia.org/wiki/Unique_local_address) to use
+
+        Each interface takes an IP address like this:
+
+        ''${lib.removeSuffix "::/48" ulaPrefix}.''${interface.subnetId}.1
       '';
     };
-    ipv4SubnetId = lib.mkOption {
-      type = types.ints.between 0 255;
+    ipv4Prefix = lib.mkOption {
+      type = types.addCheck types.nonEmptyStr (s: lib.match "[0-9]{1,3}\\.0-9]{1,3}\\.0\\.0/16" != null);
       description = ''
-        NixOS router uses this format for each interface's IPv4 address:
+        Each interface takes an IP address like this:
 
-        10.''${ipv4SubnetId}.''${interface.subnetId}.1
+        ''${lib.removeSuffix ".0.0/16" ipv4Prefix}.''${interface.subnetId}.1
       '';
     };
     hostNameAliases = lib.mkOption {
@@ -448,7 +451,7 @@ in
       readOnly = true;
       default =
         let
-          ipv6Prefix = lib.elemAt (lib.match "([^/]+)::/.+" config.router.ulaPrefix) 0;
+          ipv6Prefix = lib.removeSuffix "::/48" config.router.ulaPrefix;
         in
         {
           subnetId,
@@ -478,12 +481,15 @@ in
       internal = true;
       readOnly = true;
       default =
+        let
+          ipv4Prefix = lib.removeSuffix ".0.0/16" config.router.ipv4Prefix;
+        in
         {
           subnetId,
           hostId,
           prefixLength ? null,
         }:
-        "10.${toString config.router.ipv4SubnetId}.${toString subnetId}.${toString hostId}${
+        "${ipv4Prefix}.${toString subnetId}.${toString hostId}${
           lib.optionalString (prefixLength != null) "/${toString prefixLength}"
         }";
     };

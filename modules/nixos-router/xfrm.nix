@@ -7,7 +7,7 @@ let
   xfrmInterfaces = lib.filterAttrs (_: interface: interface.type == "xfrm") config.router.interfaces;
 in
 {
-  config = lib.mkIf config.router.enable {
+  config = {
     systemd.network = {
       netdevs = lib.mapAttrs' (
         _: interface:

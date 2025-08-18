@@ -57,9 +57,9 @@ let
     );
 in
 {
-  config = lib.mkIf config.router.enable {
+  config = {
     services.networkd-ipmon = {
-      enable = true;
+      enable = wanInterfaces != { };
       rules = lib.concatMapAttrs (
         _: interface:
         lib'.concatMapListToAttrs (

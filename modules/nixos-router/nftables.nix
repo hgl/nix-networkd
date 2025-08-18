@@ -6,7 +6,6 @@
 }:
 let
   lib' = nixosRouterLib;
-  cfg = config.router;
   wanInterfaces = lib.filterAttrs (_: interface: interface.type == "wan") config.router.interfaces;
   quarantineInterfaces = lib.filterAttrs (
     _: interface: interface.quarantine.enable or false
@@ -96,7 +95,7 @@ let
     };
 in
 {
-  config = lib.mkIf cfg.enable {
+  config = {
     networking.nftables.tables =
       lib.mapAttrs' (
         _: interface:
