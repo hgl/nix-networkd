@@ -7,11 +7,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1750823920,
-        "narHash": "sha256-YOXlF3/mcoqaBZGzQKaIIxBxgQ4ywZwlJUJe+GiIZRg=",
+        "lastModified": 1755492245,
+        "narHash": "sha256-uR95zlGl9TM+0ypt/YASF/0ELIvkP0fGDzNfE3mxS2U=",
         "owner": "hgl",
         "repo": "networkd-ipmon",
-        "rev": "e637d2fed9b01ab687e671a90ab3ec404893edcd",
+        "rev": "1ad3a18d1e3cbe880d66356de5f57eac609b0c80",
         "type": "github"
       },
       "original": {
