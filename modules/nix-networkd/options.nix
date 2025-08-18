@@ -120,6 +120,47 @@ let
       };
     }
   );
+  sitType = types.submodule (
+    { name, config, ... }:
+    {
+      options = {
+        inherit
+          priority
+          subnetId
+          dns
+          nftables
+          quarantine
+          ;
+        name = nameOption name;
+        type = interfaceType "sit";
+        mtu = lib.mkOption {
+          type = types.oneOf [
+            types.ints.positive
+            types.nonEmptyStr
+          ];
+          default = 1480;
+        };
+        ttl = lib.mkOption {
+          type = types.nullOr (types.ints.between 1 255);
+          default = null;
+        };
+        local = lib.mkOption {
+          type = types.nonEmptyStr;
+        };
+        remote = lib.mkOption {
+          type = types.nonEmptyStr;
+        };
+        addresses = lib.mkOption {
+          type = types.nonEmptyListOf types.nonEmptyStr;
+        };
+        gateway = lib.mkOption {
+          type = types.either types.nonEmptyStr (types.nonEmptyListOf types.nonEmptyStr);
+        };
+        ipv6 = ipv6 config;
+        ipv4 = ipv4 config;
+      };
+    }
+  );
   wanType = types.submodule (
     { name, config, ... }:
     {
@@ -440,6 +481,7 @@ in
         vlan = vlanType;
         xfrm = xfrmType;
         wan = wanType;
+        sit = sitType;
       });
       description = ''
         Network interfaces to create

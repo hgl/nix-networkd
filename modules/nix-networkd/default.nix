@@ -18,6 +18,7 @@ in
     ./bridge.nix
     ./vlan.nix
     ./xfrm.nix
+    ./sit.nix
     ./wan-dhcp.nix
     ./wan-pppoe.nix
     ./nftables.nix
