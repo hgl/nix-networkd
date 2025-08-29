@@ -27,4 +27,7 @@
       toHex' = q: a: if q > 0 then (toHex' (q / 16) ((lib.elemAt intToHex (lib.mod q 16)) + a)) else a;
     in
     v: toHex' v "";
+  types = import ./types.nix {
+    inherit lib lib';
+  };
 }

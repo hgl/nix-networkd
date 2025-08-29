@@ -14,41 +14,6 @@ let
     check = x: lib.isFunction x;
     merge = lib.options.mergeOneOption;
   };
-  # like lib.types.oneOf but instead of a list takes an attrset
-  # uses the field "type" to find the correct type in the attrset
-  # copied from disko
-  oneOfSubmodules =
-    submoduleAttrs:
-    lib.mkOptionType {
-      name = "subType";
-      description = "one of ${lib.concatStringsSep "," (lib.attrNames submoduleAttrs)}";
-      check = x: lib.isAttrs x;
-      merge =
-        loc: defs:
-        let
-          evaled = lib.evalModules {
-            modules =
-              [
-                {
-                  freeformType = lib.types.lazyAttrsOf lib.types.raw;
-                  options.type = lib.mkOption {
-                    type = lib.types.str;
-                  };
-                }
-              ]
-              ++ map (
-                { value, file }:
-                {
-                  _file = file;
-                  config = value;
-                }
-              ) defs;
-          };
-          inherit (evaled.config) type;
-        in
-        submoduleAttrs.${type}.merge loc defs;
-      nestedTypes = submoduleAttrs;
-    };
   bridgeType = types.submodule (
     { name, config, ... }:
     {
@@ -476,13 +441,15 @@ in
       '';
     };
     interfaces = lib.mkOption {
-      type = types.attrsOf (oneOfSubmodules {
-        bridge = bridgeType;
-        vlan = vlanType;
-        xfrm = xfrmType;
-        wan = wanType;
-        sit = sitType;
-      });
+      type = types.attrsOf (
+        lib'.types.taggedSubmodule {
+          bridge = bridgeType;
+          vlan = vlanType;
+          xfrm = xfrmType;
+          wan = wanType;
+          sit = sitType;
+        }
+      );
       description = ''
         Network interfaces to create
       '';
