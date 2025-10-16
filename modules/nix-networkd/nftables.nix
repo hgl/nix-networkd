@@ -136,6 +136,8 @@ in
               ];
               update = rules: ''
                 ct state vmap { established : accept, related : accept }
+                ip daddr ${config.networkd.ipv4Prefix} drop
+                ip6 daddr ${lib.removeSuffix "/48" config.networkd.ulaPrefix} drop
                 oifname {${
                   lib.concatStringsSep "," (lib.mapAttrsToList (_: interface: "\"${interface.name}\"") wanInterfaces)
                 }} accept
