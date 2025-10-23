@@ -12,7 +12,9 @@ let
   ) config.networkd.interfaces;
   table =
     {
-      useIfname ? false,
+      # iif and oif are faster, but they require the interface to exist when
+      # nftables runs, which can fail during the boot procecss
+      useIfname ? true,
     }:
     interface:
     let
