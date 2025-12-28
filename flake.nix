@@ -1,16 +1,11 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    networkd-ipmon = {
-      url = "github:hgl/networkd-ipmon";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
   outputs =
     {
       self,
       nixpkgs,
-      networkd-ipmon,
       ...
     }:
     let
@@ -23,9 +18,7 @@
       lib = lib';
       nixosModules = {
         default = self.nixosModules.nix-networkd;
-        nix-networkd = import ./modules/nix-networkd {
-          inherit networkd-ipmon;
-        };
+        nix-networkd = import ./modules/nix-networkd;
       };
       devShells = lib'.forAllSystems (system: {
         default =

@@ -6,12 +6,10 @@ Its features include:
 
 1. Create a Bridge, VLAN or XFRM interface.
 1. Create a WAN interface using either DHCP or PPPOE, with IPv6 support.
-1. (Optionally) Update DDNS on WAN IP changes.
 1. Create interface-scoped firewall rules.
 
 For a real-world example, see how it's used in [my Nix configs](https://github.com/hgl/configs).
 
 ## TODO
 
-- Better DDNS support
 - Multi-WAN support

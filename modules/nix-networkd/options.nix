@@ -173,47 +173,6 @@ let
             File containing the password to use for the PPPOE connection
           '';
         };
-        ddns = lib.mkOption {
-          type = types.listOf (
-            types.submodule {
-              options = {
-                enable = lib.mkOption {
-                  type = types.enum [
-                    true
-                    false
-                    "ipv4"
-                    "ipv6"
-                  ];
-                  default = true;
-                  description = ''
-                    Whetehr to enable this DDNS service (or IPv4/IPv6 only)
-                  '';
-                };
-                domains = lib.mkOption {
-                  type = types.nonEmptyListOf types.nonEmptyStr;
-                  description = ''
-                    The domain to update
-                  '';
-                };
-                provider = lib.mkOption {
-                  type = types.submodule {
-                    freeformType = types.attrsOf types.str;
-                    options.type = lib.mkOption {
-                      type = types.nonEmptyStr;
-                    };
-                  };
-                  description = ''
-                    The DDNS provider to use
-                  '';
-                };
-              };
-            }
-          );
-          default = [ ];
-          description = ''
-            DDNS to create on this interface
-          '';
-        };
       };
     }
   );

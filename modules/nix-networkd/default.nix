@@ -1,11 +1,4 @@
-{
-  networkd-ipmon,
-}:
-{
-  lib,
-  config,
-  ...
-}:
+{ lib, ... }:
 let
   lib' = import ../../lib {
     inherit lib lib';
@@ -13,7 +6,6 @@ let
 in
 {
   imports = [
-    networkd-ipmon.nixosModules.networkd-ipmon
     ./options.nix
     ./bridge.nix
     ./vlan.nix
@@ -22,7 +14,6 @@ in
     ./wan-dhcp.nix
     ./wan-pppoe.nix
     ./nftables.nix
-    ./ddns.nix
   ];
   config = {
     _module.args.nixNetworkdLib = lib';
