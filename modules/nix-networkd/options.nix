@@ -412,6 +412,7 @@ in
       description = ''
         Network interfaces to create
       '';
+      default = { };
     };
     ipv6 = lib.mkOption {
       type = functionType;
