@@ -71,9 +71,6 @@ in
         '';
       }) wanInterfaces;
     };
-    systemd.services = lib.concatMapAttrs (_: interface: {
-      "pppd-interface-${interface.name}".serviceConfig.Type = "notify";
-    }) wanInterfaces;
     environment.etc."ppp/pap-secrets" = {
       mode = "0600";
       text = lib.concatLines (
